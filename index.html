@@ -1,0 +1,237 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Name This NFL Player</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+  <div id="gameContainer" class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+    <h1 class="text-2xl font-bold text-center mb-4">Name This NFL Player</h1>
+    <p class="text-center mb-2">Level: <span id="currentLevel">1</span>/5</p>
+    <p id="hint" class="text-center mb-4 font-mono text-lg hidden"></p>
+    <img id="playerImage" src="" alt="NFL Player" class="w-full h-64 object-cover rounded mb-4">
+    <input id="guessInput" type="text" placeholder="Enter player's name" class="w-full p-2 border rounded mb-4">
+    <button id="submitGuess" class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Submit Guess</button>
+    <p id="feedback" class="text-center mt-4"></p>
+    <p id="score" class="text-center mt-2">Score: <span id="scoreValue">0</span></p>
+    <p id="incorrectGuesses" class="text-center mt-2">Incorrect Guesses (This Level): <span id="incorrectCount">0</span>/3</p>
+    <p id="totalIncorrect" class="text-center mt-2">Total Incorrect Guesses: <span id="totalIncorrectCount">0</span></p>
+    <button id="nextLevel" class="w-full bg-green-500 text-white p-2 rounded hover:bg-green-600 mt-4 hidden">Next Level</button>
+    <button id="restartGame" class="w-full bg-red-500 text-white p-2 rounded hover:bg-red-600 mt-4 hidden">Play Again</button>
+    <p id="shareLink" class="text-center mt-4 hidden">Share your results: <a id="shareUrl" href="#" class="text-blue-500 underline"></a></p>
+  </div>
+
+  <script>
+    // Daily players data (update this daily with new players and image URLs)
+    const dailyPlayers = [
+      { name: "Aaron Rodgers", image: "https://d.newsweek.com/en/full/2652200/aaron-rodgers.jpg?w=1200&f=cfaebfedabb8a9f5e800e51c5690aca0" },
+      { name: "Kam Chancellor", image: "https://library.sportingnews.com/styles/twitter_card_120x120/s3/2021-08/kam-chancellor-011115-getty-ftrjpg_v3fb6oanw4221a9c61mtab3s2.jpg?itok=_HUp4p7_" },
+      { name: "Willie Parker", image: "https://nbcsports.brightspotcdn.com/dims4/default/5b01794/2147483647/strip/true/crop/594x334+0+39/resize/1440x810!/quality/90/?url=https%3A%2F%2Fnbc-sports-production-nbc-sports.s3.us-east-1.amazonaws.com%2Fbrightspot%2F2e%2Fe1%2Fd3aa8f35fbe0e7e34f7d81d9fc2c%2Fwillieparker.jpg" },
+      { name: "Kerry Rhodes", image: "https://cdn.vox-cdn.com/thumbor/uBpA6djUyZQswNtS6Gy1cH686ys=/0x42:476x359/1200x800/filters:focal(0x42:476x359)/cdn.vox-cdn.com/uploads/chorus_image/image/19697455/gyi0062003799.0.jpg" },
+      { name: "Alan Faneca", image: "https://9b16f79ca967fd0708d1-2713572fef44aa49ec323e813b06d2d9.ssl.cf2.rackcdn.com/1140x_a10-7_cTC/8us00kh2-26-1580597217.jpg" }
+    ];
+
+    let currentLevel = 1;
+    let score = 0;
+    let incorrectGuesses = 0;
+    let totalIncorrectGuesses = 0;
+
+    // DOM elements
+    const gameContainer = document.getElementById('gameContainer');
+    const playerImage = document.getElementById('playerImage');
+    const guessInput = document.getElementById('guessInput');
+    const submitGuess = document.getElementById('submitGuess');
+    const feedback = document.getElementById('feedback');
+    const scoreDisplay = document.getElementById('scoreValue');
+    const currentLevelDisplay = document.getElementById('currentLevel');
+    const nextLevelButton = document.getElementById('nextLevel');
+    const restartGameButton = document.getElementById('restartGame');
+    const incorrectCountDisplay = document.getElementById('incorrectCount');
+    const totalIncorrectCountDisplay = document.getElementById('totalIncorrectCount');
+    const hintDisplay = document.getElementById('hint');
+    const shareLink = document.getElementById('shareLink');
+    const shareUrl = document.getElementById('shareUrl');
+
+    // Generate shareable link
+    function generateShareLink(score, incorrectGuesses) {
+      const baseUrl = window.location.href.split('?')[0]; // Remove existing query params
+      return `${baseUrl}?score=${score}&incorrect=${incorrectGuesses}`;
+    }
+
+    // Display results from URL query params
+    function displayResultsFromUrl() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const score = urlParams.get('score');
+      const incorrect = urlParams.get('incorrect');
+      if (score !== null && incorrect !== null) {
+        gameContainer.innerHTML = `
+          <h1 class="text-2xl font-bold text-center mb-4">Game Results</h1>
+          <p class="text-center mb-4">Score: ${score}</p>
+          <p class="text-center mb-4">Total Incorrect Guesses: ${incorrect}</p>
+          <p class="text-center"><a href="${window.location.href.split('?')[0]}" class="text-blue-500 underline">Play the game!</a></p>
+        `;
+      }
+    }
+
+    // Function to generate underscore hint with spaces preserved
+    function generateHint(name) {
+      return name
+        .split(' ')
+        .map(word => word.replace(/[a-zA-Z]/g, '_').split('').join(' '))
+        .join('    ');
+    }
+
+    // Function to generate hint with first letters of each word
+    function generateHintWithFirstLetters(name) {
+      return name
+        .split(' ')
+        .map(word => {
+          if (word.length > 0) {
+            return word[0] + word.slice(1).replace(/[a-zA-Z]/g, '_').split('').join(' ');
+          }
+          return '';
+        })
+        .join('    ');
+    }
+
+    // Load initial level
+    function loadLevel() {
+      playerImage.src = dailyPlayers[currentLevel - 1].image;
+      guessInput.value = '';
+      feedback.textContent = '';
+      submitGuess.classList.remove('hidden');
+      nextLevelButton.classList.add('hidden');
+      incorrectCountDisplay.textContent = incorrectGuesses;
+      totalIncorrectCountDisplay.textContent = totalIncorrectGuesses;
+      hintDisplay.classList.add('hidden');
+      hintDisplay.textContent = '';
+      shareLink.classList.add('hidden');
+    }
+
+    // Check for shared results on load
+    displayResultsFromUrl();
+
+    // Check guess
+    submitGuess.addEventListener('click', () => {
+      const guess = guessInput.value.trim().toLowerCase();
+      const correctName = dailyPlayers[currentLevel - 1].name.toLowerCase();
+
+      if (guess === correctName) {
+        const pointsEarned = Math.max(0, 10 - incorrectGuesses);
+        score += pointsEarned;
+        scoreDisplay.textContent = score;
+        feedback.textContent = `Correct! You earned ${pointsEarned} points!`;
+        feedback.classList.add('text-green-500');
+        submitGuess.classList.add('hidden');
+        incorrectGuesses = 0;
+        incorrectCountDisplay.textContent = incorrectGuesses;
+        hintDisplay.classList.add('hidden');
+        if (currentLevel < 5) {
+          nextLevelButton.classList.remove('hidden');
+        } else {
+          feedback.textContent = `Congrats, you know ball! Your Score is: ${score}`;
+          feedback.classList.add('text-green-500');
+          restartGameButton.classList.remove('hidden');
+          const shareUrlLink = generateShareLink(score, totalIncorrectGuesses);
+          shareUrl.href = shareUrlLink;
+          shareUrl.textContent = shareUrlLink;
+          shareLink.classList.remove('hidden');
+        }
+      } else {
+        incorrectGuesses++;
+        totalIncorrectGuesses++;
+        incorrectCountDisplay.textContent = incorrectGuesses;
+        totalIncorrectCountDisplay.textContent = totalIncorrectGuesses;
+        if (incorrectGuesses === 1) {
+          hintDisplay.textContent = `Hint 1: ${generateHint(dailyPlayers[currentLevel - 1].name)}`;
+          hintDisplay.classList.remove('hidden');
+        } else if (incorrectGuesses === 2) {
+          hintDisplay.textContent = `Hint 2: ${generateHintWithFirstLetters(dailyPlayers[currentLevel - 1].name)}`;
+          hintDisplay.classList.remove('hidden');
+        }
+        if (incorrectGuesses >= 3) {
+          feedback.textContent = `Game Over! Too many incorrect guesses. Final Score: ${score}, Total Incorrect Guesses: ${totalIncorrectGuesses}`;
+          feedback.classList.add('text-red-500');
+          submitGuess.classList.add('hidden');
+          restartGameButton.classList.remove('hidden');
+          hintDisplay.classList.add('hidden');
+          const shareUrlLink = generateShareLink(score, totalIncorrectGuesses);
+          shareUrl.href = shareUrlLink;
+          shareUrl.textContent = shareUrlLink;
+          shareLink.classList.remove('hidden');
+        } else {
+          feedback.textContent = `Incorrect. Try again! (${10 - incorrectGuesses} points remain for this level)`;
+          feedback.classList.add('text-red-500');
+        }
+      }
+    });
+
+    // Move to next level
+    nextLevelButton.addEventListener('click', () => {
+      currentLevel++;
+      currentLevelDisplay.textContent = currentLevel;
+      incorrectGuesses = 0;
+      incorrectCountDisplay.textContent = incorrectGuesses;
+      loadLevel();
+    });
+
+    // Restart game
+    restartGameButton.addEventListener('click', () => {
+      currentLevel = 1;
+      score = 0;
+      incorrectGuesses = 0;
+      totalIncorrectGuesses = 0;
+      scoreDisplay.textContent = score;
+      currentLevelDisplay.textContent = currentLevel;
+      incorrectCountDisplay.textContent = incorrectGuesses;
+      totalIncorrectCountDisplay.textContent = totalIncorrectGuesses;
+      restartGameButton.classList.add('hidden');
+      loadLevel();
+    });
+
+    // Initialize game
+    loadLevel();
+  </script>
+</body>
+</html>
