@@ -52,7 +52,8 @@
     <img id="playerImage" src="" alt="Athlete" class="w-full h-64 object-cover rounded mb-4">
     <p id="imageError" class="text-center mb-4 text-red-500 hidden">Image failed to load. Please try again or continue guessing.</p>
     <input id="guessInput" type="text" placeholder="Enter athlete's name" class="w-full p-2 border rounded mb-4">
-    <button id="submitAnswer" class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Submit Answer</button>
+    <button id="submitAnswer" class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 mb-2">Submit Answer</button>
+    <button id="nextLevel" class="w-full bg-green-500 text-white p-2 rounded hover:bg-green-600 hidden">Next Level</button>
     <p id="feedback" class="text-center mt-4"></p>
     <p id="score" class="text-center mt-2">Score: <span id="scoreValue">0</span></p>
     <p id="shareLink" class="text-center mt-4 hidden">Share your results: <a id="shareUrl" href="#" class="text-blue-500 underline"></a></p>
@@ -61,16 +62,16 @@
   <script>
     // Daily players data (update this daily with new players and image URLs)
     const dailyPlayers = [
-      { name: "Aaron Rodgers", image: "https://d.newsweek.com/en/full/2652200/aaron-rodgers.jpg?w=1200&f=cfaebfedabb8a9f5e800e51c5690aca0" },
-      { name: "Kelly Oubre", image: "https://cdn.vox-cdn.com/thumbor/UjfJIeJOO7_yu2P1hc9TDi_-KtU=/1400x1400/filters:format(jpeg)/cdn.vox-cdn.com/uploads/chorus_asset/file/10823897/920176686.jpg.jpg" },
-      { name: "Willie Parker", image: "https://nbcsports.brightspotcdn.com/dims4/default/5b01794/2147483647/strip/true/crop/594x334+0+39/resize/1440x810!/quality/90/?url=https%3A%2F%2Fnbc-sports-production-nbc-sports.s3.us-east-1.amazonaws.com%2Fbrightspot%2F2e%2Fe1%2Fd3aa8f35fbe0e7e34f7d81d9fc2c%2Fwillieparker.jpg" },
+      { name: "Ronnie Brown", image: "https://www.palmbeachpost.com/gcdn/authoring/2011/08/02/NPPP/ghows-LK-ca4b210c-52c0-4d1f-833d-9d83c158640c-2a688650.jpeg?width=660&height=372&fit=crop&format=pjpg&auto=webp" },
+      { name: "Amani Toomer", image: "https://nypost.com/wp-content/uploads/sites/2/2020/05/amani-toomer-1.jpg?quality=75&strip=all" },
+      { name: "Carlos Delgado", image: "https://i.ytimg.com/vi/z-exh9UI6hs/maxresdefault.jpg" },
       { name: "Jason Terry", image: "https://www.jsonline.com/gcdn/-mm-/f04d3c181ab2d4e272b82b72ec90a93d2c77309e/c=0-0-2518-1423/local/-/media/2017/11/29/WIGroup/Milwaukee/636475795683891245-USATSI-10445780.jpg" },
-      { name: "Alan Faneca", image: "https://9b16f79ca967fd0708d1-2713572fef44aa49ec323e813b06d2d9.ssl.cf2.rackcdn.com/1140x_a10-7_cTC/8us00kh2-26-1580597217.jpg" },
-      { name: "Teoscar Hernandez", image: "https://images2.minutemediacdn.com/image/upload/c_crop,w_4631,h_2604,x_0,y_0/c_fill,w_1440,ar_16:9,f_auto,q_auto,g_auto/images/ImagnImages/mmsport/si-temp/01htsr8pm3wycxes93c1.jpg" },
+      { name: "Duane Brown", image: "https://cdn.vox-cdn.com/thumbor/WBT--85z1RHLsDchaqirfSCVky4=/0x152:2752x1987/1400x1400/filters:focal(0x152:2752x1987):format(jpeg)/cdn.vox-cdn.com/uploads/chorus_image/image/26633431/duanebrown_p_usatsi_7518251.0.jpg" },
+      { name: "Jason Seahorn", image: "https://images2.minutemediacdn.com/image/upload/c_crop,w_2700,h_1518,x_0,y_509/c_fill,w_720,ar_16:9,f_auto,q_auto,g_auto/images/ImagnImages/mmsport/giants_country/01js5jjpb62adxyp98gp.jpg" },
       { name: "Bernie Williams", image: "https://cdn.vox-cdn.com/thumbor/TTZvHxjME3oDQVWThqb90DgDxTY=/0x0:2700x3900/1200x800/filters:focal(1070x1047:1502x1479)/cdn.vox-cdn.com/uploads/chorus_image/image/73084358/usa_today_5453276.0.jpg" },
-      { name: "Jason Heyward", image: "https://www.sandiegouniontribune.com/wp-content/uploads/2025/03/sut-l-Padres-PhotoDay-353.jpg?w=1800&resize=1800,1800" },
+      { name: "Rickie Weeks", image: "https://nbcsports.brightspotcdn.com/dims4/default/dc30def/2147483647/strip/true/crop/1023x576+0+0/resize/1000x563!/quality/90/?url=https%3A%2F%2Fnbc-sports-production-nbc-sports.s3.us-east-1.amazonaws.com%2Fbrightspot%2F3b%2F31%2F07482663477c37cf92ef3b437622%2Fweeks-brewers.jpg" },
       { name: "Ickey Woods", image: "https://fresnoahof.org/wp-content/uploads/2023/09/Untitled-design-2023-09-11T121000.477-1024x1024.png" },
-      { name: "Steve Novak", image: "https://preview.redd.it/name-an-underrated-3pt-shooter-my-pick-steve-novak-v0-2wmwd39c7pme1.jpeg?width=640&crop=smart&auto=webp&s=6118460226be5d1426e236605ac445f249005801" }
+      { name: "Jay Bruce", image: "https://cdn.fansided.com/wp-content/blogs.dir/3/files/2016/12/9590527-jay-bruce-mlb-new-york-mets-philadelphia-phillies-1-850x560.jpg" }
     ];
 
     let currentLevel = 1;
@@ -83,6 +84,7 @@
     const imageError = document.getElementById('imageError');
     const guessInput = document.getElementById('guessInput');
     const submitAnswer = document.getElementById('submitAnswer');
+    const nextLevel = document.getElementById('nextLevel');
     const feedback = document.getElementById('feedback');
     const scoreDisplay = document.getElementById('scoreValue');
     const currentLevelDisplay = document.getElementById('currentLevel');
@@ -93,11 +95,13 @@
     playerImage.onerror = () => {
       imageError.classList.remove('hidden');
       submitAnswer.classList.remove('hidden');
+      nextLevel.classList.add('hidden');
     };
 
     playerImage.onload = () => {
       imageError.classList.add('hidden');
       submitAnswer.classList.remove('hidden');
+      nextLevel.classList.add('hidden');
     };
 
     // Generate shareable link
@@ -133,6 +137,8 @@
       guessInput.value = '';
       feedback.textContent = '';
       submitAnswer.classList.remove('hidden');
+      guessInput.classList.remove('hidden');
+      nextLevel.classList.add('hidden');
       imageError.classList.add('hidden');
       scoreDisplay.textContent = score;
       currentLevelDisplay.textContent = currentLevel;
@@ -146,9 +152,11 @@
         loadLevel();
       } else {
         feedback.textContent = `Game Over! Your Score: ${score}/50`;
+        feedback.classList.remove('text-red-500', 'text-green-500');
         feedback.classList.add('text-green-500');
         submitAnswer.classList.add('hidden');
         guessInput.classList.add('hidden');
+        nextLevel.classList.add('hidden');
         const shareUrlLink = generateShareLink(score, incorrectAthletes);
         shareUrl.href = shareUrlLink;
         shareUrl.textContent = shareUrlLink;
@@ -161,6 +169,7 @@
       const guess = guessInput.value.trim().toLowerCase();
       const correctName = dailyPlayers[currentLevel - 1].name.toLowerCase();
 
+      feedback.classList.remove('text-red-500', 'text-green-500');
       if (guess === correctName) {
         score += 5;
         feedback.textContent = `Correct! You earned 5 points!`;
@@ -171,6 +180,13 @@
         feedback.classList.add('text-red-500');
       }
       scoreDisplay.textContent = score;
+      submitAnswer.classList.add('hidden');
+      guessInput.classList.add('hidden');
+      nextLevel.classList.remove('hidden');
+    });
+
+    // Next level button
+    nextLevel.addEventListener('click', () => {
       moveToNextLevel();
     });
 
