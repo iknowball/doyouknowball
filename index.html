@@ -1,66 +1,31 @@
-<script type="text/javascript">
-        var gk_isXlsx = false;
-        var gk_xlsxFileLookup = {};
-        var gk_fileData = {};
-        function filledCell(cell) {
-          return cell !== '' && cell != null;
-        }
-        function loadFileData(filename) {
-        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
-            try {
-                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
-                var firstSheetName = workbook.SheetNames[0];
-                var worksheet = workbook.Sheets[firstSheetName];
-
-                // Convert sheet to JSON to filter blank rows
-                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
-                // Filter out blank rows (rows where all cells are empty, null, or undefined)
-                var filteredData = jsonData.filter(row => row.some(filledCell));
-
-                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
-                var headerRowIndex = filteredData.findIndex((row, index) =>
-                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
-                );
-                // Fallback
-                if (headerRowIndex === -1 || headerRowIndex > 25) {
-                  headerRowIndex = 0;
-                }
-
-                // Convert filtered JSON back to CSV
-                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
-                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
-                return csv;
-            } catch (e) {
-                console.error(e);
-                return "";
-            }
-        }
-        return gk_fileData[filename] || "";
-        }
-        </script><!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Name This Athlete</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap" rel="stylesheet">
 </head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen">
-  <div id="gameContainer" class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-    <h1 class="text-2xl font-bold text-center mb-4">Name This Athlete</h1>
-    <p class="text-center mb-2">Level: <span id="currentLevel">1</span>/10</p>
-    <img id="playerImage" src="" alt="Athlete" class="w-full h-64 object-cover rounded mb-4">
-    <p id="imageError" class="text-center mb-4 text-red-500 hidden">Image failed to load. Please try again or continue guessing.</p>
-    <input id="guessInput" type="text" placeholder="Enter athlete's name" class="w-full p-2 border rounded mb-4">
-    <button id="submitAnswer" class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 mb-2">Submit Answer</button>
-    <button id="nextLevel" class="w-full bg-green-500 text-white p-2 rounded hover:bg-green-600 hidden">Next Level</button>
-    <p id="feedback" class="text-center mt-4"></p>
-    <p id="score" class="text-center mt-2">Score: <span id="scoreValue">0</span></p>
-    <p id="shareLink" class="text-center mt-4 hidden">Share your results: <a id="shareUrl" href="#" class="text-blue-500 underline"></a></p>
+<body class="bg-gray-900 bg-gradient-to-b from-gray-800 to-gray-900 flex items-center justify-center min-h-screen font-montserrat">
+  <div id="gameContainer" class="bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-md border border-blue-600">
+    <h1 class="text-3xl font-bold text-center text-white mb-4">Name This Athlete</h1>
+    <p class="text-center text-blue-400 mb-2 text-lg">Level: <span id="currentLevel">1</span>/10</p>
+    <div class="relative w-full h-72 mb-4 rounded-lg overflow-hidden border-2 border-blue-500">
+      <img id="playerImage" src="" alt="Athlete" class="w-full h-full object-cover">
+      <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+    </div>
+    <p id="imageError" class="text-center mb-4 text-red-500 hidden">Image failed to load. Keep guessing!</p>
+    <input id="guessInput" type="text" placeholder="Who's this athlete?" class="w-full p-3 bg-gray-700 text-white border border-blue-500 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-600" autocomplete="off">
+    <button id="submitAnswer" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transform hover:scale-105 transition duration-200 font-bold mb-2">Submit Answer</button>
+    <button id="nextLevel" class="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transform hover:scale-105 transition duration-200 font-bold hidden">Next Level</button>
+    <button id="playAgain" class="w-full bg-red-600 text-white p-3 rounded-lg hover:bg-red-700 transform hover:scale-105 transition duration-200 font-bold hidden">Play Again</button>
+    <p id="feedback" class="text-center mt-4 text-xl font-bold animate-fade-in"></p>
+    <p id="score" class="text-center mt-2 text-white">Score: <span id="scoreValue">0</span>/50</p>
+    <p id="shareLink" class="text-center mt-4 hidden text-white">Share your results: <a id="shareUrl" href="#" class="text-blue-400 underline"></a></p>
   </div>
 
   <script>
-    // Daily players data (update this daily with new players and image URLs)
+    // Daily players data (updated with new players and image URLs)
     const dailyPlayers = [
       { name: "Ronnie Brown", image: "https://www.palmbeachpost.com/gcdn/authoring/2011/08/02/NPPP/ghows-LK-ca4b210c-52c0-4d1f-833d-9d83c158640c-2a688650.jpeg?width=660&height=372&fit=crop&format=pjpg&auto=webp" },
       { name: "Amani Toomer", image: "https://nypost.com/wp-content/uploads/sites/2/2020/05/amani-toomer-1.jpg?quality=75&strip=all" },
@@ -85,6 +50,7 @@
     const guessInput = document.getElementById('guessInput');
     const submitAnswer = document.getElementById('submitAnswer');
     const nextLevel = document.getElementById('nextLevel');
+    const playAgain = document.getElementById('playAgain');
     const feedback = document.getElementById('feedback');
     const scoreDisplay = document.getElementById('scoreValue');
     const currentLevelDisplay = document.getElementById('currentLevel');
@@ -106,7 +72,7 @@
 
     // Generate shareable link
     function generateShareLink(score, incorrectAthletes) {
-      const baseUrl = window.location.href.split('?')[0]; // Remove existing query params
+      const baseUrl = window.location.href.split('?')[0];
       const incorrectParam = incorrectAthletes.map(name => encodeURIComponent(name)).join(',');
       return `${baseUrl}?score=${score}&incorrect=${incorrectParam}`;
     }
@@ -117,16 +83,16 @@
       const score = urlParams.get('score');
       const incorrect = urlParams.get('incorrect');
       if (score !== null) {
-        let incorrectMessage = "I knew all the athletes!";
+        let incorrectMessage = "I knew all the athletes! 🏆";
         if (incorrect) {
           const incorrectList = incorrect.split(',').map(name => decodeURIComponent(name)).join(', ');
           incorrectMessage = `I did not know ${incorrectList}.`;
         }
         gameContainer.innerHTML = `
-          <h1 class="text-2xl font-bold text-center mb-4">Game Results</h1>
-          <p class="text-center mb-4">Score: ${score}/50</p>
-          <p class="text-center mb-4">${incorrectMessage}</p>
-          <p class="text-center"><a href="${window.location.href.split('?')[0]}" class="text-blue-500 underline">Play again!</a></p>
+          <h1 class="text-3xl font-bold text-center text-white mb-4">Game Results</h1>
+          <p class="text-center mb-4 text-blue-400 text-xl">Score: ${score}/50 🏈</p>
+          <p class="text-center mb-4 text-white">${incorrectMessage}</p>
+          <p class="text-center"><a href="${window.location.href.split('?')[0]}" class="text-blue-400 underline text-lg">Play again! 🏀</a></p>
         `;
       }
     }
@@ -139,6 +105,7 @@
       submitAnswer.classList.remove('hidden');
       guessInput.classList.remove('hidden');
       nextLevel.classList.add('hidden');
+      playAgain.classList.add('hidden');
       imageError.classList.add('hidden');
       scoreDisplay.textContent = score;
       currentLevelDisplay.textContent = currentLevel;
@@ -151,15 +118,16 @@
       if (currentLevel <= dailyPlayers.length) {
         loadLevel();
       } else {
-        feedback.textContent = `Game Over! Your Score: ${score}/50`;
+        feedback.textContent = `Game Over! Your Score: ${score}/50 🏆`;
         feedback.classList.remove('text-red-500', 'text-green-500');
-        feedback.classList.add('text-green-500');
+        feedback.classList.add('text-blue-400');
         submitAnswer.classList.add('hidden');
         guessInput.classList.add('hidden');
         nextLevel.classList.add('hidden');
+        playAgain.classList.remove('hidden');
         const shareUrlLink = generateShareLink(score, incorrectAthletes);
         shareUrl.href = shareUrlLink;
-        shareUrl.textContent = shareUrlLink;
+        shareUrl.textContent = `🏈 My Score: ${score}/50 ${incorrectAthletes.length ? '| Missed: ' + incorrectAthletes.join(', ') : '| Nailed all athletes!'}`;
         shareLink.classList.remove('hidden');
       }
     }
@@ -172,11 +140,11 @@
       feedback.classList.remove('text-red-500', 'text-green-500');
       if (guess === correctName) {
         score += 5;
-        feedback.textContent = `Correct! You earned 5 points!`;
+        feedback.textContent = `Nailed it! +5 points! 🏀`;
         feedback.classList.add('text-green-500');
       } else {
         incorrectAthletes.push(dailyPlayers[currentLevel - 1].name);
-        feedback.textContent = `Incorrect. The athlete was ${dailyPlayers[currentLevel - 1].name}.`;
+        feedback.textContent = `Swing and a miss! It was ${dailyPlayers[currentLevel - 1].name}.`;
         feedback.classList.add('text-red-500');
       }
       scoreDisplay.textContent = score;
@@ -190,11 +158,32 @@
       moveToNextLevel();
     });
 
+    // Play again button
+    playAgain.addEventListener('click', () => {
+      currentLevel = 1;
+      score = 0;
+      incorrectAthletes = [];
+      loadLevel();
+    });
+
     // Check for shared results on load
     displayResultsFromUrl();
 
     // Initialize game
     loadLevel();
   </script>
+
+  <style>
+    @keyframes fade-in {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in {
+      animation: fade-in 0.3s ease-out;
+    }
+    .font-montserrat {
+      font-family: 'Montserrat', sans-serif;
+    }
+  </style>
 </body>
 </html>
