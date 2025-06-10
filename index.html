@@ -6,8 +6,12 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap" rel="stylesheet">
 </head>
-<body class="bg-gray-900 bg-gradient-to-b from-gray-800 to-gray-900 flex items-center justify-center min-h-screen font-montserrat">
-  <div id="gameContainer" class="bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-md border border-blue-600">
+<body class="bg-gray-900 bg-gradient-to-b from-gray-800 to-gray-900 flex flex-col items-center justify-center min-h-screen font-montserrat">
+  <header class="w-full max-w-md bg-gray-800 text-white text-center py-2 border border-blue-600 rounded-lg mb-4 shadow-lg transform hover:shadow-xl transition duration-200">
+    <p class="text-lg font-bold">New Challenge Daily at 9 PM Eastern</p>
+  </header>
+  <div id="gameContainer" class="bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-md border border-blue-600 relative">
+    <div id="timer" class="absolute top-2 left-2 bg-gray-800 text-white border border-blue-600 rounded px-2 py-1 text-sm font-bold">00:00</div>
     <h1 class="text-3xl font-bold text-center text-white mb-4">Name This Athlete</h1>
     <p class="text-center text-blue-400 mb-2 text-lg">Level: <span id="currentLevel">1</span>/10</p>
     <div class="relative w-full h-72 mb-4 rounded-lg overflow-hidden border-2 border-blue-500">
@@ -19,13 +23,36 @@
     <button id="submitAnswer" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transform hover:scale-105 transition duration-200 font-bold mb-2">Submit Answer</button>
     <button id="nextLevel" class="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transform hover:scale-105 transition duration-200 font-bold hidden">Next Level</button>
     <button id="playAgain" class="w-full bg-red-600 text-white p-3 rounded-lg hover:bg-red-700 transform hover:scale-105 transition duration-200 font-bold hidden">Play Again</button>
+    <button id="viewStats" class="w-full bg-red-600 text-white p-3 rounded-lg hover:bg-red-700 transform hover:scale-105 transition duration-200 font-bold hidden mt-2">View Stats</button>
     <p id="feedback" class="text-center mt-4 text-xl font-bold animate-fade-in"></p>
     <p id="score" class="text-center mt-2 text-white">Score: <span id="scoreValue">0</span>/50</p>
     <p id="shareLink" class="text-center mt-4 hidden text-white">Share your results: <a id="shareUrl" href="#" class="text-blue-400 underline"></a></p>
   </div>
 
+  <!-- Stats Modal -->
+  <div id="statsModal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden">
+    <div class="bg-gray-800 p-6 rounded-xl w-full max-w-md border border-blue-600">
+      <h2 class="text-2xl font-bold text-center text-white mb-4">Your Game Stats</h2>
+      <p id="avgScore" class="text-center text-blue-400 mb-4 text-lg"></p>
+      <div class="overflow-x-auto">
+        <table class="w-full text-white border-collapse">
+          <thead>
+            <tr class="bg-gray-700">
+              <th class="p-2 border border-blue-500">Attempt</th>
+              <th class="p-2 border border-blue-500">Score</th>
+              <th class="p-2 border border-blue-500">Time</th>
+              <th class="p-2 border border-blue-500">Date</th>
+            </tr>
+          </thead>
+          <tbody id="statsTableBody" class="text-center"></tbody>
+        </table>
+      </div>
+      <button id="closeStats" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 font-bold mt-4">Close</button>
+    </div>
+  </div>
+
   <script>
-    // Daily players data (updated with new players and image URLs)
+    // Daily players data (original URLs)
     const dailyPlayers = [
       { name: "Ronnie Brown", image: "https://www.palmbeachpost.com/gcdn/authoring/2011/08/02/NPPP/ghows-LK-ca4b210c-52c0-4d1f-833d-9d83c158640c-2a688650.jpeg?width=660&height=372&fit=crop&format=pjpg&auto=webp" },
       { name: "Amani Toomer", image: "https://nypost.com/wp-content/uploads/sites/2/2020/05/amani-toomer-1.jpg?quality=75&strip=all" },
@@ -34,7 +61,7 @@
       { name: "Duane Brown", image: "https://cdn.vox-cdn.com/thumbor/WBT--85z1RHLsDchaqirfSCVky4=/0x152:2752x1987/1400x1400/filters:focal(0x152:2752x1987):format(jpeg)/cdn.vox-cdn.com/uploads/chorus_image/image/26633431/duanebrown_p_usatsi_7518251.0.jpg" },
       { name: "Jason Seahorn", image: "https://images2.minutemediacdn.com/image/upload/c_crop,w_2700,h_1518,x_0,y_509/c_fill,w_720,ar_16:9,f_auto,q_auto,g_auto/images/ImagnImages/mmsport/giants_country/01js5jjpb62adxyp98gp.jpg" },
       { name: "Bernie Williams", image: "https://cdn.vox-cdn.com/thumbor/TTZvHxjME3oDQVWThqb90DgDxTY=/0x0:2700x3900/1200x800/filters:focal(1070x1047:1502x1479)/cdn.vox-cdn.com/uploads/chorus_image/image/73084358/usa_today_5453276.0.jpg" },
-      { name: "Rickie Weeks", image: "https://nbcsports.brightspotcdn.com/dims4/default/dc30def/2147483647/strip/true/crop/1023x576+0+0/resize/1000x563!/quality/90/?url=https%3A%2F%2Fnbc-sports-production-nbc-sports.s3.us-east-1.amazonaws.com%2Fbrightspot%2F3b%2F31%2F07482663477c37cf92ef3b437622%2Fweeks-brewers.jpg" },
+      { name: "Rickie Weeks", image: "https://nbcsports.brightspotcdn.com/dims4/default/dc30def/2147483647/strip=true/crop/1023x576+0+0/resize/1000x563!/quality/90/?url=https%3A%2F%2Fnbc-sports-production-nbc-sports.s3.us-east-1.amazonaws.com%2Fbrightspot%2F3b%2F31%2F07482663477c37cf92ef3b437622%2Fweeks-brewers.jpg" },
       { name: "Ickey Woods", image: "https://fresnoahof.org/wp-content/uploads/2023/09/Untitled-design-2023-09-11T121000.477-1024x1024.png" },
       { name: "Jay Bruce", image: "https://cdn.fansided.com/wp-content/blogs.dir/3/files/2016/12/9590527-jay-bruce-mlb-new-york-mets-philadelphia-phillies-1-850x560.jpg" }
     ];
@@ -42,6 +69,9 @@
     let currentLevel = 1;
     let score = 0;
     let incorrectAthletes = [];
+    let startTime = null;
+    let elapsedTime = 0;
+    let timerInterval;
 
     // DOM elements
     const gameContainer = document.getElementById('gameContainer');
@@ -51,11 +81,81 @@
     const submitAnswer = document.getElementById('submitAnswer');
     const nextLevel = document.getElementById('nextLevel');
     const playAgain = document.getElementById('playAgain');
+    const viewStats = document.getElementById('viewStats');
     const feedback = document.getElementById('feedback');
     const scoreDisplay = document.getElementById('scoreValue');
     const currentLevelDisplay = document.getElementById('currentLevel');
     const shareLink = document.getElementById('shareLink');
     const shareUrl = document.getElementById('shareUrl');
+    const statsModal = document.getElementById('statsModal');
+    const avgScore = document.getElementById('avgScore');
+    const statsTableBody = document.getElementById('statsTableBody');
+    const closeStats = document.getElementById('closeStats');
+    const timerDisplay = document.getElementById('timer');
+
+    // Timer functions
+    function startTimer() {
+      startTime = Date.now();
+      timerInterval = setInterval(updateTimer, 1000);
+    }
+
+    function updateTimer() {
+      elapsedTime = Math.floor((Date.now() - startTime) / 1000);
+      const minutes = Math.floor(elapsedTime / 60).toString().padStart(2, '0');
+      const seconds = (elapsedTime % 60).toString().padStart(2, '0');
+      timerDisplay.textContent = `${minutes}:${seconds}`;
+    }
+
+    function stopTimer() {
+      clearInterval(timerInterval);
+      return elapsedTime;
+    }
+
+    function formatTime(seconds) {
+      const minutes = Math.floor(seconds / 60).toString().padStart(2, '0');
+      const secs = (seconds % 60).toString().padStart(2, '0');
+      return `${minutes}:${secs}`;
+    }
+
+    // Initialize score history
+    function getScoreHistory() {
+      return JSON.parse(localStorage.getItem('scoreHistory') || '[]');
+    }
+
+    function saveScoreHistory(score, time) {
+      const history = getScoreHistory();
+      history.push({
+        score: score,
+        time: time,
+        timestamp: new Date().toISOString()
+      });
+      localStorage.setItem('scoreHistory', JSON.stringify(history));
+    }
+
+    function calculateAverageScore() {
+      const history = getScoreHistory();
+      if (history.length === 0) return 0;
+      const total = history.reduce((sum, entry) => sum + entry.score, 0);
+      return (total / history.length).toFixed(1);
+    }
+
+    function displayStats() {
+      const history = getScoreHistory();
+      avgScore.textContent = `Average Score: ${calculateAverageScore()}/50`;
+      statsTableBody.innerHTML = '';
+      history.forEach((entry, index) => {
+        const row = document.createElement('tr');
+        row.classList.add('hover:bg-gray-600');
+        row.innerHTML = `
+          <td class="p-2 border border-blue-500">${index + 1}</td>
+          <td class="p-2 border border-blue-500">${entry.score}/50</td>
+          <td class="p-2 border border-blue-500">${formatTime(entry.time)}</td>
+          <td class="p-2 border border-blue-500">${new Date(entry.timestamp).toLocaleString()}</td>
+        `;
+        statsTableBody.appendChild(row);
+      });
+      statsModal.classList.remove('hidden');
+    }
 
     // Handle image load errors
     playerImage.onerror = () => {
@@ -106,10 +206,14 @@
       guessInput.classList.remove('hidden');
       nextLevel.classList.add('hidden');
       playAgain.classList.add('hidden');
+      viewStats.classList.add('hidden');
       imageError.classList.add('hidden');
       scoreDisplay.textContent = score;
       currentLevelDisplay.textContent = currentLevel;
       shareLink.classList.add('hidden');
+      if (currentLevel === 1 && !startTime) {
+        startTimer();
+      }
     }
 
     // Move to next level
@@ -118,6 +222,8 @@
       if (currentLevel <= dailyPlayers.length) {
         loadLevel();
       } else {
+        const finalTime = stopTimer();
+        saveScoreHistory(score, finalTime);
         feedback.textContent = `Game Over! Your Score: ${score}/50 🏆`;
         feedback.classList.remove('text-red-500', 'text-green-500');
         feedback.classList.add('text-blue-400');
@@ -125,6 +231,7 @@
         guessInput.classList.add('hidden');
         nextLevel.classList.add('hidden');
         playAgain.classList.remove('hidden');
+        viewStats.classList.remove('hidden');
         const shareUrlLink = generateShareLink(score, incorrectAthletes);
         shareUrl.href = shareUrlLink;
         shareUrl.textContent = `🏈 My Score: ${score}/50 ${incorrectAthletes.length ? '| Missed: ' + incorrectAthletes.join(', ') : '| Nailed all athletes!'}`;
@@ -151,6 +258,9 @@
       submitAnswer.classList.add('hidden');
       guessInput.classList.add('hidden');
       nextLevel.classList.remove('hidden');
+      if (currentLevel === dailyPlayers.length) {
+        stopTimer();
+      }
     });
 
     // Next level button
@@ -163,14 +273,27 @@
       currentLevel = 1;
       score = 0;
       incorrectAthletes = [];
+      startTime = null;
+      elapsedTime = 0;
+      timerDisplay.textContent = '00:00';
       loadLevel();
     });
 
-    // Check for shared results on load
-    displayResultsFromUrl();
+    // View stats button
+    viewStats.addEventListener('click', () => {
+      displayStats();
+    });
+
+    // Close stats modal
+    closeStats.addEventListener('click', () => {
+      statsModal.classList.add('hidden');
+    });
 
     // Initialize game
     loadLevel();
+
+    // Check for shared results on load
+    displayResultsFromUrl();
   </script>
 
   <style>
